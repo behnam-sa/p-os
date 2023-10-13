@@ -1,16 +1,20 @@
+cargo-features = ["profile-rustflags"]
+
 [package]
 name = "p-os"
 version = "0.1.0"
 edition = "2021"
 default-run = "p-os"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.test.package.kernel]
+rustflags = ["--test"]
 
 [workspace]
 members = ["kernel"]
 
 [dependencies]
 ovmf-prebuilt = "0.1.0-alpha"
+wait-timeout = "0.2.0"
 
 [build-dependencies]
 kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
