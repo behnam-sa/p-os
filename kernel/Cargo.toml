@@ -12,3 +12,6 @@ bench = false
 
 [dependencies]
 bootloader_api = "0.11.4"
+bootloader-x86_64-common = "0.11.4"
+log = { version = "0.4.20", default-features = false }
+conquer-once = { version = "0.4.0", default-features = false }
