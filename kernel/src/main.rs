@@ -17,7 +17,9 @@ bootloader_api::entry_point!(kernel_main);
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     log::error!("{info}");
-    loop {}
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
 
 #[cfg(test)]
@@ -26,7 +28,9 @@ fn panic(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {info}\n");
     exit_qemu(QemuExitCode::Failed);
-    loop {}
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
@@ -43,7 +47,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     #[cfg(test)]
     test_main();
 
-    loop {}
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
 
 #[test_case]
