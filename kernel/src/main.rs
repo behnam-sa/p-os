@@ -5,13 +5,17 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+mod gdt;
 mod interrupts;
 mod logger;
 mod serial;
 
-use crate::{interrupts::init_idt, logger::init_logger, serial::init_serial};
 use bootloader_api::BootInfo;
 use core::panic::PanicInfo;
+use gdt::init_gdt;
+use interrupts::init_idt;
+use logger::init_logger;
+use serial::init_serial;
 
 bootloader_api::entry_point!(kernel_main);
 
@@ -43,6 +47,13 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     // invoke a breakpoint exception
     x86_64::instructions::interrupts::int3();
 
+    fn stack_overflow() {
+        stack_overflow(); // for each recursion, the return address is pushed
+    }
+
+    // trigger a stack overflow
+    stack_overflow();
+
     log::info!("It did not crash!");
 
     #[cfg(test)]
@@ -61,6 +72,7 @@ fn init(boot_info: &'static mut BootInfo) {
 
     init_logger(raw_frame_buffer, framebuffer_info);
     init_serial();
+    init_gdt();
     init_idt();
 }
 
