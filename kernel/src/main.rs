@@ -1,13 +1,15 @@
 #![no_std]
 #![no_main]
+#![feature(abi_x86_interrupt)]
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+mod interrupts;
 mod logger;
 mod serial;
 
-use crate::{logger::init_logger, serial::init_serial};
+use crate::{interrupts::init_idt, logger::init_logger, serial::init_serial};
 use bootloader_api::BootInfo;
 use core::panic::PanicInfo;
 
@@ -34,15 +36,14 @@ fn panic(info: &PanicInfo) -> ! {
 }
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    let framebuffer = boot_info.framebuffer.as_mut().unwrap();
-
-    let framebuffer_info = framebuffer.info().clone();
-    let raw_frame_buffer = framebuffer.buffer_mut();
-
-    init_logger(raw_frame_buffer, framebuffer_info);
-    init_serial();
+    init(boot_info);
 
     log::info!("Hello from kernel!");
+
+    // invoke a breakpoint exception
+    x86_64::instructions::interrupts::int3();
+
+    log::info!("It did not crash!");
 
     #[cfg(test)]
     test_main();
@@ -50,6 +51,17 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     loop {
         x86_64::instructions::hlt();
     }
+}
+
+fn init(boot_info: &'static mut BootInfo) {
+    let framebuffer = boot_info.framebuffer.as_mut().unwrap();
+
+    let framebuffer_info = framebuffer.info().clone();
+    let raw_frame_buffer = framebuffer.buffer_mut();
+
+    init_logger(raw_frame_buffer, framebuffer_info);
+    init_serial();
+    init_idt();
 }
 
 #[test_case]
