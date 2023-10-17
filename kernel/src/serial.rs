@@ -1,22 +1,20 @@
-use spin::Mutex;
+use core::fmt::{Arguments, Write};
 use uart_16550::SerialPort;
 
-pub(crate) static SERIAL1: Mutex<SerialPort> = {
-    let serial_port = unsafe { SerialPort::new(0x3F8) };
-    Mutex::new(serial_port)
-};
+use crate::uninterruptible_mutex::UninterruptibleMutex;
+
+static SERIAL_PORT_BASE_NUMBER: u16 = 0x3F8;
+
+pub(crate) static SERIAL1: UninterruptibleMutex<SerialPort> =
+    UninterruptibleMutex::new(unsafe { SerialPort::new(SERIAL_PORT_BASE_NUMBER) });
 
 pub(crate) fn init() {
     SERIAL1.lock().init();
 }
 
 #[doc(hidden)]
-pub(crate) fn _print(args: ::core::fmt::Arguments) {
-    use core::fmt::Write;
-    SERIAL1
-        .lock()
-        .write_fmt(args)
-        .expect("Printing to serial failed");
+pub(crate) fn _print(args: Arguments) {
+    SERIAL1.lock().write_fmt(args).unwrap();
 }
 
 /// Prints to the host through the serial interface.

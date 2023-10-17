@@ -9,6 +9,8 @@ mod gdt;
 mod interrupts;
 mod logger;
 mod serial;
+mod terminal;
+mod uninterruptible_mutex;
 
 use bootloader_api::BootInfo;
 use core::panic::PanicInfo;
@@ -18,7 +20,10 @@ bootloader_api::entry_point!(kernel_main);
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
+    x86_64::instructions::interrupts::disable();
+
     log::error!("{info}");
+
     loop {
         x86_64::instructions::hlt();
     }
@@ -27,8 +32,11 @@ fn panic(info: &PanicInfo) -> ! {
 #[cfg(test)]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    serial_println!("[failed]\n");
-    serial_println!("Error: {info}\n");
+    x86_64::instructions::interrupts::disable();
+
+    println!("[failed]\n");
+    println!("Error: {info}\n");
+
     exit_qemu(QemuExitCode::Failed);
 }
 
@@ -37,9 +45,6 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     log::info!("Hello from kernel!");
 
-    // invoke a breakpoint exception
-    x86_64::instructions::interrupts::int3();
-    x86_64::instructions::interrupts::int3();
     x86_64::instructions::interrupts::int3();
 
     log::info!("It did not crash!");
@@ -58,8 +63,9 @@ fn init(boot_info: &'static mut BootInfo) {
     let framebuffer_info = framebuffer.info().clone();
     let raw_frame_buffer = framebuffer.buffer_mut();
 
-    logger::init(raw_frame_buffer, framebuffer_info);
     serial::init();
+    terminal::init(raw_frame_buffer, framebuffer_info);
+    logger::init();
     gdt::init();
     interrupts::init();
 }
@@ -79,16 +85,16 @@ where
 {
     fn run(&self) {
         let test_name = core::any::type_name::<T>();
-        serial_print!("{test_name}...    ");
+        print!("{test_name}...    ");
         self();
-        serial_println!("[ok]");
+        println!("[ok]");
     }
 }
 
 #[cfg(test)]
 pub(crate) fn test_runner(tests: &[&dyn Testable]) {
     log::info!("running {} tests", tests.len());
-    serial_println!("running {} tests", tests.len());
+    println!("running {} tests", tests.len());
 
     for test in tests {
         test.run();

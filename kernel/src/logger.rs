@@ -1,12 +1,38 @@
-use bootloader_api::info::FrameBufferInfo;
-use bootloader_x86_64_common::logger::LockedLogger;
-use conquer_once::spin::OnceCell;
+use crate::{
+    terminal::{Terminal, TERMINAL},
+    uninterruptible_mutex::UninterruptibleMutex,
+};
+use core::fmt::Write;
 
-pub(crate) static LOGGER: OnceCell<LockedLogger> = OnceCell::uninit();
+pub(crate) struct Logger<'a> {
+    terminal: &'a UninterruptibleMutex<Terminal<'a>>,
+}
 
-pub(crate) fn init(buffer: &'static mut [u8], info: FrameBufferInfo) {
-    let logger = LOGGER.get_or_init(move || LockedLogger::new(buffer, info, true, false));
-    log::set_logger(logger).expect("Logger already set");
+impl<'a> Logger<'a> {
+    pub const fn new(terminal: &'a UninterruptibleMutex<Terminal<'a>>) -> Logger<'_> {
+        Self { terminal }
+    }
+}
+
+pub(crate) static LOGGER: Logger = Logger::new(&TERMINAL);
+
+pub(crate) fn init() {
+    log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Trace);
     log::info!("Logger initialized");
+}
+
+impl log::Log for Logger<'_> {
+    fn enabled(&self, _metadata: &log::Metadata) -> bool {
+        true
+    }
+
+    fn log(&self, record: &log::Record) {
+        let mut terminal = self.terminal.lock();
+        writeln!(terminal, "{:5}: {}", record.level(), record.args()).unwrap();
+    }
+
+    fn flush(&self) {
+        self.terminal.lock().flush();
+    }
 }

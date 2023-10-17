@@ -3,6 +3,9 @@
         "bootloader",
         "framebuffer",
         "ovmf",
-        "uefi"
+        "repr",
+        "uart",
+        "uefi",
+        "uninit"
     ]
 }
