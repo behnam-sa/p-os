@@ -1,14 +1,15 @@
-use conquer_once::spin::Lazy;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
-
+use crate::add_hardware_interrupt;
 use crate::{gdt, print};
+use conquer_once::spin::Lazy;
 use pic8259::ChainedPics;
 use spin;
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum InterruptIndex {
     Timer = PIC_1_OFFSET,
+    Keyboard,
 }
 
 pub(crate) const PIC_1_OFFSET: u8 = 32;
@@ -26,7 +27,8 @@ static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
             .set_handler_fn(double_fault_handler)
             .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX)
     };
-    idt[InterruptIndex::Timer as usize].set_handler_fn(timer_interrupt_handler);
+    add_hardware_interrupt!(idt, InterruptIndex::Timer, timer_interrupt_handler);
+    add_hardware_interrupt!(idt, InterruptIndex::Keyboard, keyboard_interrupt_handler);
 
     idt
 });
@@ -36,7 +38,7 @@ pub(crate) fn init() {
     unsafe {
         let mut pics = PICS.lock();
         pics.initialize();
-        pics.write_masks(0b1111_1110, 0b1111_1111)
+        pics.write_masks(0b1111_1100, 0b1111_1111)
     };
 
     x86_64::instructions::interrupts::enable();
@@ -53,11 +55,48 @@ extern "x86-interrupt" fn double_fault_handler(
     panic!("Exception: Double fault\n{stack_frame:#?}");
 }
 
-extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
+fn timer_interrupt_handler() {
     print!(".");
+}
 
-    unsafe {
-        PICS.lock()
-            .notify_end_of_interrupt(InterruptIndex::Timer as u8);
+fn keyboard_interrupt_handler() {
+    use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
+    use spin::Mutex;
+    use x86_64::instructions::port::Port;
+
+    static KEYBOARD: Lazy<Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>>> = Lazy::new(|| {
+        Mutex::new(Keyboard::new(
+            ScancodeSet1::new(),
+            layouts::Us104Key,
+            HandleControl::Ignore,
+        ))
+    });
+
+    let mut keyboard = KEYBOARD.lock();
+    let mut port = Port::new(0x60);
+
+    let scancode: u8 = unsafe { port.read() };
+    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+        if let Some(key) = keyboard.process_keyevent(key_event) {
+            match key {
+                DecodedKey::Unicode(character) => print!("{}", character),
+                _ => (),
+            }
+        }
     }
+}
+
+#[macro_export]
+macro_rules! add_hardware_interrupt {
+    ($idt:expr, $interrupt_id:expr, $callback:ident) => {{
+        extern "x86-interrupt" fn interrupt_handler(_stack_frame: InterruptStackFrame) {
+            $callback();
+
+            unsafe {
+                PICS.lock().notify_end_of_interrupt($interrupt_id as u8);
+            }
+        }
+
+        $idt[$interrupt_id as usize].set_handler_fn(interrupt_handler);
+    }};
 }
