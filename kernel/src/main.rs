@@ -39,13 +39,8 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     // invoke a breakpoint exception
     x86_64::instructions::interrupts::int3();
-
-    fn stack_overflow() {
-        stack_overflow(); // for each recursion, the return address is pushed
-    }
-
-    // trigger a stack overflow
-    stack_overflow();
+    x86_64::instructions::interrupts::int3();
+    x86_64::instructions::interrupts::int3();
 
     log::info!("It did not crash!");
 
