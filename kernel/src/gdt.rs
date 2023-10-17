@@ -17,7 +17,7 @@ struct Selectors {
     tss_selector: SegmentSelector,
 }
 
-pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
+pub(crate) const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 
 static TSS: Lazy<TaskStateSegment> = Lazy::new(|| {
     let mut tss = TaskStateSegment::new();
@@ -45,7 +45,7 @@ static GDT_AND_SELECTORS: Lazy<GDTAndSelectors> = Lazy::new(|| {
     }
 });
 
-pub fn init_gdt() {
+pub(crate) fn init() {
     use x86_64::instructions::segmentation::{Segment, CS};
     use x86_64::instructions::tables::load_tss;
 

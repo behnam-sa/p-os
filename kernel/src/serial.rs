@@ -6,12 +6,12 @@ pub(crate) static SERIAL1: Mutex<SerialPort> = {
     Mutex::new(serial_port)
 };
 
-pub(crate) fn init_serial() {
+pub(crate) fn init() {
     SERIAL1.lock().init();
 }
 
 #[doc(hidden)]
-pub fn _print(args: ::core::fmt::Arguments) {
+pub(crate) fn _print(args: ::core::fmt::Arguments) {
     use core::fmt::Write;
     SERIAL1
         .lock()

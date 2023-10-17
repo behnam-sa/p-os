@@ -12,10 +12,6 @@ mod serial;
 
 use bootloader_api::BootInfo;
 use core::panic::PanicInfo;
-use gdt::init_gdt;
-use interrupts::init_idt;
-use logger::init_logger;
-use serial::init_serial;
 
 bootloader_api::entry_point!(kernel_main);
 
@@ -34,9 +30,6 @@ fn panic(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {info}\n");
     exit_qemu(QemuExitCode::Failed);
-    loop {
-        x86_64::instructions::hlt();
-    }
 }
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
@@ -70,10 +63,10 @@ fn init(boot_info: &'static mut BootInfo) {
     let framebuffer_info = framebuffer.info().clone();
     let raw_frame_buffer = framebuffer.buffer_mut();
 
-    init_logger(raw_frame_buffer, framebuffer_info);
-    init_serial();
-    init_gdt();
-    init_idt();
+    logger::init(raw_frame_buffer, framebuffer_info);
+    serial::init();
+    gdt::init();
+    interrupts::init();
 }
 
 #[test_case]
@@ -81,7 +74,7 @@ fn trivial_assertion() {
     assert_eq!(1, 1);
 }
 
-pub trait Testable {
+pub(crate) trait Testable {
     fn run(&self) -> ();
 }
 
@@ -109,19 +102,24 @@ pub(crate) fn test_runner(tests: &[&dyn Testable]) {
     exit_qemu(QemuExitCode::Success);
 }
 
+#[cfg(test)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
-pub enum QemuExitCode {
+pub(crate) enum QemuExitCode {
     Success = 0x10,
     Failed = 0x11,
 }
 
 #[cfg(test)]
-pub fn exit_qemu(exit_code: QemuExitCode) {
+pub(crate) fn exit_qemu(exit_code: QemuExitCode) -> ! {
     use x86_64::instructions::port::Port;
 
     unsafe {
         let mut port = Port::new(0xf4);
         port.write(exit_code as u32);
+    }
+
+    loop {
+        x86_64::instructions::hlt();
     }
 }
