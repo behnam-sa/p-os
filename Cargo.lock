@@ -519,6 +519,7 @@ dependencies = [
  "bootloader_api",
  "conquer-once 0.4.0",
  "klib",
+ "linked_list_allocator",
  "log",
  "pc-keyboard",
  "pic8259",
@@ -548,6 +549,15 @@ name = "libc"
 version = "0.2.149"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a08173bc88b7955d1b3145aa561539096c421ac8debde8cbc3612ec635fee29b"
+
+[[package]]
+name = "linked_list_allocator"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9afa463f5405ee81cdb9cc2baf37e08ec7e4c8209442b5d72c04cfb2cd6e6286"
+dependencies = [
+ "spinning_top",
+]
 
 [[package]]
 name = "linux-raw-sys"

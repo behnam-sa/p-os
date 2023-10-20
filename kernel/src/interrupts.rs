@@ -89,7 +89,7 @@ extern "x86-interrupt" fn double_fault_handler(
 }
 
 fn timer_interrupt_handler() {
-    print!(".");
+    // print!(".");
 }
 
 fn keyboard_interrupt_handler() {
