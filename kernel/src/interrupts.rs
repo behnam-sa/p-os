@@ -1,5 +1,6 @@
-use crate::{gdt, print};
+use crate::gdt;
 use conquer_once::spin::Lazy;
+use klib::io::print;
 use pic8259::ChainedPics;
 use spin;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};

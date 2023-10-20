@@ -1,8 +1,6 @@
-use crate::{
-    terminal::{Terminal, TERMINAL},
-    uninterruptible_mutex::UninterruptibleMutex,
-};
+use crate::terminal::TERMINAL;
 use core::fmt::Write;
+use klib::{interrupts::UninterruptibleMutex, io::Terminal};
 
 pub(crate) struct Logger<'a> {
     terminal: &'a UninterruptibleMutex<Terminal<'a>>,
@@ -12,14 +10,6 @@ impl<'a> Logger<'a> {
     pub const fn new(terminal: &'a UninterruptibleMutex<Terminal<'a>>) -> Logger<'_> {
         Self { terminal }
     }
-}
-
-pub(crate) static LOGGER: Logger = Logger::new(&TERMINAL);
-
-pub(crate) fn init() {
-    log::set_logger(&LOGGER).unwrap();
-    log::set_max_level(log::LevelFilter::Trace);
-    log::info!("Logger initialized");
 }
 
 impl log::Log for Logger<'_> {
@@ -35,4 +25,12 @@ impl log::Log for Logger<'_> {
     fn flush(&self) {
         self.terminal.lock().flush();
     }
+}
+
+pub(crate) static LOGGER: Logger = Logger::new(&TERMINAL);
+
+pub(crate) fn init() {
+    log::set_logger(&LOGGER).unwrap();
+    log::set_max_level(log::LevelFilter::Trace);
+    log::info!("Logger initialized");
 }

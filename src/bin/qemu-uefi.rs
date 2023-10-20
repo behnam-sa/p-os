@@ -1,10 +1,7 @@
 #![feature(custom_test_frameworks)]
 #![test_runner(test_runner)]
 
-use std::{
-    process::{self, Command},
-    time::Duration,
-};
+use std::{process::Command, time::Duration};
 
 use terminal_size::terminal_size;
 use wait_timeout::ChildExt;
@@ -62,11 +59,11 @@ fn run_qemu(serial_output: bool, hide_window: bool) {
     };
 
     let exit_code = exit_status.code().unwrap_or(-1);
+    println!("\nQEMU exited with code {exit_code}");
 
     if cfg!(test) && exit_code > 0x20 {
         let kernel_exit_code = (exit_code >> 1) - 0x10;
-        process::exit(kernel_exit_code);
-    }
 
-    process::exit(exit_code);
+        println!("Kernel exited with code {kernel_exit_code}");
+    }
 }

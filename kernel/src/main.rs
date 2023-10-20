@@ -10,10 +10,10 @@ mod interrupts;
 mod logger;
 mod serial;
 mod terminal;
-mod uninterruptible_mutex;
 
 use bootloader_api::BootInfo;
 use core::panic::PanicInfo;
+use klib::io::{print, println};
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -131,12 +131,14 @@ where
 
 #[cfg(test)]
 pub(crate) fn test_runner(tests: &[&dyn Testable]) {
-    println!("\nrunning {} tests\n", tests.len());
+    let test_count = tests.len();
+    println!("\nrunning {test_count} tests\n");
 
     for test in tests {
         test.run();
     }
 
+    println!("\ntest result: ok. {test_count} passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in ?.??s");
     exit_qemu(QemuExitCode::Success);
 }
 

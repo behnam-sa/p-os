@@ -518,7 +518,24 @@ dependencies = [
  "bootloader-x86_64-common",
  "bootloader_api",
  "conquer-once 0.4.0",
+ "klib",
  "log",
+ "pc-keyboard",
+ "pic8259",
+ "spin",
+ "uart_16550 0.3.0",
+ "x86_64",
+]
+
+[[package]]
+name = "klib"
+version = "0.1.0"
+dependencies = [
+ "bootloader-x86_64-common",
+ "bootloader_api",
+ "conquer-once 0.4.0",
+ "log",
+ "macro_pub",
  "pc-keyboard",
  "pic8259",
  "spin",
@@ -565,6 +582,15 @@ name = "log"
 version = "0.4.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
+
+[[package]]
+name = "macro_pub"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cede240e13256fcfbade77d11b9bbe68c2d002856279f92d1d64c3c583c58f21"
+dependencies = [
+ "xxhash-rust",
+]
 
 [[package]]
 name = "mbrman"
@@ -1166,6 +1192,12 @@ checksum = "8d29b4d8e7beaceb4e77447ba941a7600d23d0319ab52da0461abea214832d5a"
 dependencies = [
  "zero",
 ]
+
+[[package]]
+name = "xxhash-rust"
+version = "0.8.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9828b178da53440fa9c766a3d2f73f7cf5d0ac1fe3980c1e5018d899fd19e07b"
 
 [[package]]
 name = "zero"
