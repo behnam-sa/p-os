@@ -14,6 +14,7 @@ members = ["kernel"]
 
 [dependencies]
 ovmf-prebuilt = "0.1.0-alpha"
+terminal_size = "0.3.0"
 wait-timeout = "0.2.0"
 
 [build-dependencies]

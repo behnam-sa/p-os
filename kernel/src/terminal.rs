@@ -77,17 +77,11 @@ pub(crate) fn init(framebuffer: &'static mut [u8], info: FrameBufferInfo) {
     let frame_buffer_writer = FRAME_BUFFER_WRITER
         .get_or_init(move || UninterruptibleMutex::new(FrameBufferWriter::new(framebuffer, info)));
 
-    *TERMINAL.lock() = create_terminal(frame_buffer_writer);
-}
-
-#[cfg(not(test))]
-fn create_terminal(frame_buffer_writer: &UninterruptibleMutex<FrameBufferWriter>) -> Terminal<'_> {
-    Terminal::new(Some(frame_buffer_writer), Some(&SERIAL1))
-}
-
-#[cfg(test)]
-fn create_terminal(frame_buffer_writer: &UninterruptibleMutex<FrameBufferWriter>) -> Terminal<'_> {
-    Terminal::new(None, Some(&SERIAL1))
+    *TERMINAL.lock() = if cfg!(test) {
+        Terminal::new(None, Some(&SERIAL1))
+    } else {
+        Terminal::new(Some(frame_buffer_writer), Some(&SERIAL1))
+    }
 }
 
 #[doc(hidden)]

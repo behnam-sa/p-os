@@ -1,20 +1,24 @@
+#![feature(custom_test_frameworks)]
+#![test_runner(test_runner)]
+
 use std::{
     process::{self, Command},
     time::Duration,
 };
 
+use terminal_size::terminal_size;
 use wait_timeout::ChildExt;
 
 fn main() {
-    run_qemu();
+    run_qemu(true, false);
 }
 
-#[test]
-fn test_kernel() {
-    run_qemu();
+#[cfg(test)]
+fn test_runner(_tests: &[&dyn Fn()]) {
+    run_qemu(true, true);
 }
 
-fn run_qemu() {
+fn run_qemu(serial_output: bool, hide_window: bool) {
     let uefi_image = env!("UEFI_IMAGE");
 
     let mut qemu = Command::new("qemu-system-x86_64");
@@ -22,11 +26,22 @@ fn run_qemu() {
         .arg(format!("format=raw,file={uefi_image}"));
     qemu.arg("-bios").arg(ovmf_prebuilt::ovmf_pure_efi());
 
-    if cfg!(test) {
+    if hide_window {
+        qemu.arg("-display").arg("none");
+    }
+
+    if serial_output {
         qemu.arg("-device")
             .arg("isa-debug-exit,iobase=0xf4,iosize=0x04");
         qemu.arg("-serial").arg("stdio");
-        qemu.arg("-display").arg("none");
+
+        if let Some(terminal_size) = terminal_size() {
+            let (_, height) = terminal_size;
+
+            for _ in 0..height.0 {
+                println!();
+            }
+        }
     }
 
     let mut child = qemu.spawn().unwrap();

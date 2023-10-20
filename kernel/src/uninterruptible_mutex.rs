@@ -11,6 +11,7 @@ pub struct UninterruptibleMutex<T: ?Sized> {
 
 pub struct UninterruptibleMutexGuard<'a, T: 'a + ?Sized> {
     lock: MutexGuard<'a, T>,
+    #[allow(dead_code)]
     interrupt_guard: InterruptGuard,
 }
 

@@ -15,8 +15,6 @@ mod uninterruptible_mutex;
 use bootloader_api::BootInfo;
 use core::panic::PanicInfo;
 
-bootloader_api::entry_point!(kernel_main);
-
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -40,6 +38,13 @@ fn panic(info: &PanicInfo) -> ! {
     exit_qemu(QemuExitCode::Failed);
 }
 
+#[cfg(not(test))]
+bootloader_api::entry_point!(kernel_main);
+
+#[cfg(test)]
+bootloader_api::entry_point!(test_kernel_main);
+
+#[allow(dead_code)]
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     init(boot_info);
 
@@ -74,7 +79,15 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     }
     println!("write worked");
 
-    #[cfg(test)]
+    loop {
+        x86_64::instructions::hlt();
+    }
+}
+
+#[cfg(test)]
+fn test_kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    init(boot_info);
+
     test_main();
 
     loop {
@@ -118,8 +131,7 @@ where
 
 #[cfg(test)]
 pub(crate) fn test_runner(tests: &[&dyn Testable]) {
-    log::info!("running {} tests", tests.len());
-    println!("running {} tests", tests.len());
+    println!("\nrunning {} tests\n", tests.len());
 
     for test in tests {
         test.run();
