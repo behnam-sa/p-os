@@ -49,6 +49,31 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     log::info!("It did not crash!");
 
+    use x86_64::registers::control::Cr3;
+
+    let (level_4_page_table, _) = Cr3::read();
+    println!(
+        "Level 4 page table at: {:?}",
+        level_4_page_table.start_address()
+    );
+
+    // Note: The actual address might be different for you. Use the address that
+    // your page fault handler reports.
+    let ptr = 0x8000012b1b as *mut u8;
+
+    // read from a code page
+    unsafe {
+        let x = *ptr;
+        println!("x = {x}")
+    }
+    println!("read worked");
+
+    // write to a code page
+    unsafe {
+        *ptr = 42;
+    }
+    println!("write worked");
+
     #[cfg(test)]
     test_main();
 

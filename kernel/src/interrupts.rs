@@ -1,9 +1,8 @@
-use crate::add_hardware_interrupt;
 use crate::{gdt, print};
 use conquer_once::spin::Lazy;
 use pic8259::ChainedPics;
 use spin;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
@@ -18,10 +17,27 @@ pub(crate) const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
 pub(crate) static PICS: spin::Mutex<ChainedPics> =
     spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 
-static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(create_idt);
+
+macro_rules! add_hardware_interrupt {
+    ($idt:expr, $interrupt_id:expr, $callback:ident) => {{
+        extern "x86-interrupt" fn interrupt_handler(_stack_frame: InterruptStackFrame) {
+            $callback();
+
+            unsafe {
+                PICS.lock().notify_end_of_interrupt($interrupt_id as u8);
+            }
+        }
+
+        $idt[$interrupt_id as usize].set_handler_fn(interrupt_handler);
+    }};
+}
+
+fn create_idt() -> InterruptDescriptorTable {
     let mut idt = InterruptDescriptorTable::new();
 
     idt.breakpoint.set_handler_fn(breakpoint_handler);
+    idt.page_fault.set_handler_fn(page_fault_handler);
     unsafe {
         idt.double_fault
             .set_handler_fn(double_fault_handler)
@@ -31,7 +47,7 @@ static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
     add_hardware_interrupt!(idt, InterruptIndex::Keyboard, keyboard_interrupt_handler);
 
     idt
-});
+}
 
 pub(crate) fn init() {
     IDT.load();
@@ -46,6 +62,22 @@ pub(crate) fn init() {
 
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
     log::warn!("Exception: Breakpoint\n{stack_frame:#?}");
+}
+
+extern "x86-interrupt" fn page_fault_handler(
+    stack_frame: InterruptStackFrame,
+    error_code: PageFaultErrorCode,
+) {
+    use x86_64::registers::control::Cr2;
+
+    let cr2_value = Cr2::read();
+
+    panic!(
+        "Exception: PAGE FAULT\n\
+        Accessed Address: {cr2_value:?}\n\
+        Error Code: {error_code:?}\n\
+        {stack_frame:#?}"
+    );
 }
 
 extern "x86-interrupt" fn double_fault_handler(
@@ -84,19 +116,4 @@ fn keyboard_interrupt_handler() {
             }
         }
     }
-}
-
-#[macro_export]
-macro_rules! add_hardware_interrupt {
-    ($idt:expr, $interrupt_id:expr, $callback:ident) => {{
-        extern "x86-interrupt" fn interrupt_handler(_stack_frame: InterruptStackFrame) {
-            $callback();
-
-            unsafe {
-                PICS.lock().notify_end_of_interrupt($interrupt_id as u8);
-            }
-        }
-
-        $idt[$interrupt_id as usize].set_handler_fn(interrupt_handler);
-    }};
 }
